@@ -19,6 +19,8 @@ import (
 	"github.com/v2fly/v2ray-core/v5/transport/internet/kcp"
 	"github.com/v2fly/v2ray-core/v5/transport/internet/quic"
 	"github.com/v2fly/v2ray-core/v5/transport/internet/tcp"
+	"github.com/v2fly/v2ray-core/v5/transport/internet/tls"
+	"github.com/v2fly/v2ray-core/v5/transport/internet/tls/utls"
 	"github.com/v2fly/v2ray-core/v5/transport/internet/websocket"
 )
 
@@ -321,6 +323,25 @@ func (c *StreamConfig) Build() (*internet.StreamConfig, error) {
 			return nil, newError("Failed to build TLS config.").Base(err)
 		}
 		tm := serial.ToTypedMessage(ts)
+		config.SecuritySettings = append(config.SecuritySettings, tm)
+		config.SecurityType = serial.V2Type(tm)
+	}
+	if strings.EqualFold(c.Security, "utls") {
+		tlsSettings := c.TLSSettings
+		if tlsSettings == nil {
+			tlsSettings = &tlscfg.TLSConfig{}
+		}
+		ts, err := tlsSettings.Build()
+		if err != nil {
+			return nil, newError("Failed to build TLS config.").Base(err)
+		}
+		utlsConfig := &utls.Config{
+			TlsConfig: new(tls.Config),
+			Imitate:   "chrome_auto",
+			NoSNI:     false,
+		}
+		proto.Merge(utlsConfig.TlsConfig, ts)
+		tm := serial.ToTypedMessage(utlsConfig)
 		config.SecuritySettings = append(config.SecuritySettings, tm)
 		config.SecurityType = serial.V2Type(tm)
 	}
